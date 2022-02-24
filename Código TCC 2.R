@@ -16,97 +16,10 @@ require(lubridate)
 
 
 vacinacao_sp <- readRDS('cache/banco vacina.RDS')
-SEADE <- readRDS('cache/SEADE.RDS') %>% ungroup()
+SEADE <- readRDS('cache/SEADE.RDS')
 Banco_Idade <- readRDS('Cache/Idade.RDS')
-####Dados do IBGE: Importação e Tratamento##############
 
-# dados demográficos
-demo_sp_mun <- 
-  readxl::read_xlsx('Dados/Dados Demográficos SP.xlsx') %>%
-  select(Municipio=Município,
-         Codigo=Código,
-         IDHM,
-         PIB_cap=`PIB per capita - R$ [2018]`,
-         Pop=`População estimada - pessoas [2021]`,
-         area=`Área Territorial - km² [2020]`) %>%
-  mutate(Codigo=as.numeric(str_sub(Codigo,1,-2)),
-         densidade2021=Pop/area,
-         Municipio=toupper(Municipio))
-
-##MUITO LERDO, NÃO RODAR SE JÁ TIVER CACHE#########
-
-
-# trat <-
-#   function(x, pos){
-#     x %>% group_by(vacina_dataAplicacao,
-#                    vacina_descricao_dose,
-#                    estabelecimento_municipio_codigo,
-#                    estabelecimento_uf) %>% count()}
-# 
-# trat2 <- function(x){
-#   x%>% group_by(vacina_dataAplicacao,
-#                vacina_descricao_dose,
-#                estabelecimento_municipio_codigo,
-#                estabelecimento_uf) %>% summarise(n = sum(n))
-# }
-# 
-# parte1 <- readr::read_csv2_chunked(
-#   'Dados/Vacina sp parte 1.csv',
-#   DataFrameCallback$new(trat),
-#   chunk_size = 7000) %>% trat2()
-# 
-# 
-# parte2 <- readr::read_csv2_chunked(
-#   'Dados/Vacina sp parte 2.csv',
-#   DataFrameCallback$new(trat),
-#   chunk_size = 7000)%>% trat2()
-# 
-# 
-# parte3 <- readr::read_csv2_chunked(
-#   'Dados/Vacina sp parte 3.csv',
-#   DataFrameCallback$new(trat),
-#   chunk_size = 7000)%>% trat2()
-# 
-# 
-# vacinacao_sp <- bind_rows(parte1,parte2,parte3)%>% trat2()
-# 
-# 
-# 
-# 
-# saveRDS(vacinacao_sp,'Cache/banco vacina.RDS')
-# 
-# 
-# rm(parte1,parte2,parte3)
-# #########TRATAMENTO MICRODADOS COVID SEADE################
-# 
-# 
-# SEADE <- read_csv2('Dados/20220121_Casos-e-obitos-ESP.csv',
-#                    locale = locale(encoding = 'UTF-8')) %>%
-#   mutate(Data=lubridate::dmy(`Data Inicio Sintomas`)) %>%
-#   unite('Risco',Asma:`Outros Fatores De Risco`,remove = TRUE) %>%
-#   mutate(Risco=str_detect(Risco,'SIM')*1) %>%
-#   group_by(Municipio,Data,Risco,Obito) %>% count() %>% left_join(demo_sp_mun)
-# 
-# 
-# 
-# 
-# 
-# saveRDS(SEADE,'Cache/SEADE.RDS')
-# 
-# Preparo do banco de idade
-# 
-# Banco_Idade <- read_csv2('Dados/20220121_Casos-e-obitos-ESP.csv',
-#                    locale = locale(encoding = 'UTF-8')) %>%
-#   mutate(Data=lubridate::dmy(`Data Inicio Sintomas`)) %>%
-#   select(Municipio,Data,Idade)
-# 
-# saveRDS(Banco_Idade,'Cache/Idade.RDS')
 ####montagem do banco lqr caso geral##########
-
-
-
-
-
 
 
 
@@ -175,7 +88,7 @@ logit_linpred <- logit_fn(banco_lqr$let,
                           epsilon=epsilon)
 
 
-for(k in 1:length(qs)){
+ for(k in 1:length(qs)){
   
   ## quantil do loop
   tau=qs[k] 
@@ -203,3 +116,19 @@ for(k in 1:length(qs)){
 
 
 ##############################################################################
+
+My_Theme = theme(
+  axis.title.x = element_text(size = 20),
+  axis.text.x = element_text(size = 18),
+  axis.title.y = element_text(size = 20),
+  axis.text.y = element_text(size = 18))
+for( i in 1:7){
+ beta0   <- data.frame(li=LI[,i],cl=CL[,i],ls=LS[,i])
+ 
+ ggplot(beta0, aes(x = qs, y = cl)) +
+   geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
+   geom_line() +
+   labs(x = expression(p), y = expression(beta)) + My_Theme
+ Sys.sleep(2)
+ 
+ }
