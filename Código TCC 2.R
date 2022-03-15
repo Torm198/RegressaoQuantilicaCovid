@@ -33,9 +33,16 @@ b <- SEADE %>%
   mutate(let=sum(`1`)/sum(`0`+`1`)) %>%
   select(-c(Data,Risco,`0`,`1`)) %>% unique()
 
-c <- vacinacao_sp %>% pivot_wider(names_from=vacina_descricao_dose,values_from = n, values_fill = 0) %>%
-  group_by(estabelecimento_municipio_codigo,estabelecimento_uf)%>%
-  summarise(esquema=sum(`2ª Dose`+`Dose Adicional`+`Reforço`+`Única`+`2ª Dose Revacinação`+`3ª Dose`+`1º Reforço`,na.rm=T)) %>%
+# c <- vacinacao_sp %>% pivot_wider(names_from=vacina_descricao_dose,values_from = n, values_fill = 0) %>%
+#   group_by(estabelecimento_municipio_codigo,estabelecimento_uf)%>%
+#   summarise(esquema=sum(`2ª Dose`+`Dose Adicional`+`Reforço`+`Única`+`2ª Dose Revacinação`+`3ª Dose`+`1º Reforço`,na.rm=T)) %>%
+#   rename(Codigo=estabelecimento_municipio_codigo)
+
+
+c <- vacinacao_sp %>% pivot_wider(names_from=vacina_descricao_dose,values_from = n,values_fill = 0) %>%
+  group_by(vacina_dataAplicacao,estabelecimento_municipio_codigo,estabelecimento_uf)%>%
+  summarise(esquema=sum(`2ª Dose`+`Dose Adicional`+`Reforço`+`Única`+`2ª Dose Revacinação`+`3ª Dose`+`1º Reforço`,na.rm=T))  %>%
+  group_by(estabelecimento_municipio_codigo) %>% mutate(esquema=cumsum(esquema)) %>% summarise(esquema=max(esquema))%>%
   rename(Codigo=estabelecimento_municipio_codigo)
 
 
