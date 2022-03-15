@@ -14,7 +14,7 @@ corte_banco <- function(Data_inicio,Data_final){
     select(-c(Data,Risco,`0`,`1`)) %>% unique()
    
    # Método antigo
-   # c <- vacinacao_sp %>% pivot_wider(names_from=vacina_descricao_dose,values_from = n, values_fill = 0) %>%
+   # c <- vacinacao_sp%>% filter(Data %within% int) %>% pivot_wider(names_from=vacina_descricao_dose,values_from = n, values_fill = 0) %>%
    #   group_by(estabelecimento_municipio_codigo,estabelecimento_uf)%>%
    #   summarise(esquema=sum(`2ª Dose`+`Dose Adicional`+`Reforço`+`Única`+`2ª Dose Revacinação`+`3ª Dose`+`1º Reforço`,na.rm=T)) %>%
    #   rename(Codigo=estabelecimento_municipio_codigo)
@@ -23,7 +23,7 @@ corte_banco <- function(Data_inicio,Data_final){
   c <- vacinacao_sp %>% pivot_wider(names_from=vacina_descricao_dose,values_from = n,values_fill = 0) %>%
     group_by(vacina_dataAplicacao,estabelecimento_municipio_codigo,estabelecimento_uf)%>%
     summarise(esquema=sum(`2ª Dose`+`Dose Adicional`+`Reforço`+`Única`+`2ª Dose Revacinação`+`3ª Dose`+`1º Reforço`,na.rm=T))  %>%
-    group_by(estabelecimento_municipio_codigo) %>% mutate(esquema=cumsum(esquema)) %>% summarise(esquema=max(esquema))%>%
+    group_by(estabelecimento_municipio_codigo) %>% mutate(esquema=cumsum(esquema))%>% filter(Data %within% int) %>% summarise(esquema=max(esquema))%>%
     rename(Codigo=estabelecimento_municipio_codigo)
   
   
