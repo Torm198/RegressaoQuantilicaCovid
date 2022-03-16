@@ -23,31 +23,31 @@ corte_banco <- function(Data_inicio,Data_final){
   c <- vacinacao_sp %>% pivot_wider(names_from=vacina_descricao_dose,values_from = n,values_fill = 0) %>%
     group_by(vacina_dataAplicacao,estabelecimento_municipio_codigo,estabelecimento_uf)%>%
     summarise(esquema=sum(`2ª Dose`+`Dose Adicional`+`Reforço`+`Única`+`2ª Dose Revacinação`+`3ª Dose`+`1º Reforço`,na.rm=T))  %>%
-    group_by(estabelecimento_municipio_codigo) %>% mutate(esquema=cumsum(esquema))%>% filter(Data %within% int) %>% summarise(esquema=max(esquema))%>%
+    group_by(estabelecimento_municipio_codigo) %>% mutate(esquema=cumsum(esquema))%>% filter(vacina_dataAplicacao %within% int) %>% summarise(esquema=max(esquema))%>%
     rename(Codigo=estabelecimento_municipio_codigo)
   
   
   
   d <- Banco_Idade %>% filter(Data %within% int) %>% group_by(Municipio) %>% summarise(Idade_mediana=median(Idade,na.rm = T))
   
-  e <- vacinacao_sp %>% filter(Data %within% int) %>%
+  e <- vacinacao_sp %>% filter(vacina_dataAplicacao %within% int) %>%
     group_by(estabelecimento_municipio_codigo) %>% arrange(vacina_dataAplicacao) %>%
     summarise(Doses_diárias=mean(n)) %>% rename(Codigo=estabelecimento_municipio_codigo)
   
-  banco_lqr <- left_join(b,a) %>% left_join(c) %>% left_join(d) %>% left_join(e) %>%
-    mutate(esquema=esquema/Pop) %>% filter(!is.na(Codigo))
+  banco_lqr_corte <- left_join(b,a) %>% left_join(c) %>% left_join(d) %>% left_join(e) %>%
+    mutate(esquema=esquema/Pop,PIB_cap=PIB_cap/10000,densidade2021=densidade2021/100) %>% filter(!is.na(Codigo))
   
-  return(banco_lqr)
+  return(banco_lqr_corte)
 }
 
 
 dir <- 'Periodo 1/'
-banco_lqr <- corte_banco('xx/02/202x','xx/02/202x')
+banco_lqr_corte <- corte_banco('01/03/2020','28/11/2020')
 
 
 ###################
-fit1  <- lm(let~IDHM+PIB_cap+densidade2021+Risco+Doses_diárias+Idade_mediana+esquema,
-            x=T, y=T,data = banco_lqr)
+fit1  <- lm(let~IDHM+densidade2021+Risco+Idade_mediana,
+            x=T, y=T,data = banco_lqr_corte)
 summary(fit1)
 vif_values <-vif(fit1)
 barplot(vif_values, main = "VIF Values")
@@ -68,14 +68,14 @@ LI <- matrix(NA,length(qs),8)
 
 
 epsilon <- 0.0001
-fit_lm <- Glm(let~IDHM+PIB_cap+densidade2021+Risco+Doses_diárias+Idade_mediana+esquema,
-              x=T, y=T,data = banco_lqr)
+fit_lm <- Glm(let~IDHM+PIB_cap+densidade2021+Risco+Idade_mediana,
+              x=T, y=T,data = banco_lqr_corte)
 
 # transformação
-y_min <- min(banco_lqr$let, na.rm=T)
-y_max <- max(banco_lqr$let, na.rm=T)
+y_min <- min(banco_lqr_corte$let, na.rm=T)
+y_max <- max(banco_lqr_corte$let, na.rm=T)
 
-logit_linpred <- logit_fn(banco_lqr$let, 
+logit_linpred <- logit_fn(banco_lqr_corte$let, 
                           y_min=y_min,
                           y_max=y_max,
                           epsilon=epsilon)
@@ -95,7 +95,7 @@ for(k in 1:length(qs)){
   
   
   # montando a regressão quantílica
-  fit_rq <- Rq(formula(fit_lm), x=T, y=T, tau=tau,data = banco_lqr)
+  fit_rq <- Rq(formula(fit_lm), x=T, y=T, tau=tau,data = banco_lqr_corte)
   
   fit_rq_logit <- update(fit_rq, logit_linpred ~ .)
   boot_rq_logit <- bootcov(fit_rq_logit,B=500)
@@ -184,9 +184,9 @@ ggsave(paste0(dir,'beta7.png'))
 ###################
 
 set.seed(2020)
-inds <- sample(1:nrow(banco_lqr), 600, replace=FALSE)
-banco_lqr_treino <- banco_lqr[inds,]
-banco_lqr_valid  <- banco_lqr[-inds,]
+inds <- sample(1:nrow(banco_lqr_corte), 600, replace=FALSE)
+banco_lqr_corte_treino <- banco_lqr_corte[inds,]
+banco_lqr_corte_valid  <- banco_lqr_corte[-inds,]
 
 
 ## Quantis de interesse
@@ -195,18 +195,18 @@ CL <- matrix(NA,length(qs),8)
 LS <- matrix(NA,length(qs),8)
 LI <- matrix(NA,length(qs),8)
 
-forecasts_95  <- matrix(NA,nrow(banco_lqr_valid),length(qs)) 
+forecasts_95  <- matrix(NA,nrow(banco_lqr_corte_valid),length(qs)) 
 
 
 epsilon <- 0.0001
 fit_lm <- Glm(let~IDHM+PIB_cap+densidade2021+Risco+Doses_diárias+Idade_mediana+esquema,
-              x=T, y=T,data = banco_lqr_treino)
+              x=T, y=T,data = banco_lqr_corte_treino)
 
 # transformação
-y_min <- min(banco_lqr_treino$let, na.rm=T)
-y_max <- max(banco_lqr_treino$let, na.rm=T)
+y_min <- min(banco_lqr_corte_treino$let, na.rm=T)
+y_max <- max(banco_lqr_corte_treino$let, na.rm=T)
 
-logit_linpred <- logit_fn(banco_lqr_treino$let, 
+logit_linpred <- logit_fn(banco_lqr_corte_treino$let, 
                           y_min=y_min,
                           y_max=y_max,
                           epsilon=epsilon)
@@ -215,13 +215,13 @@ logit_linpred <- logit_fn(banco_lqr_treino$let,
 ## matriz X de validacao
 
 X_valid <- cbind(1,
-                 banco_lqr_valid$IDHM,
-                 banco_lqr_valid$PIB_cap,
-                 banco_lqr_valid$densidade2021,
-                 banco_lqr_valid$Risco,
-                 banco_lqr_valid$Doses_diárias,
-                 banco_lqr_valid$Idade_mediana,
-                 banco_lqr_valid$esquema)
+                 banco_lqr_corte_valid$IDHM,
+                 banco_lqr_corte_valid$PIB_cap,
+                 banco_lqr_corte_valid$densidade2021,
+                 banco_lqr_corte_valid$Risco,
+                 banco_lqr_corte_valid$Doses_diárias,
+                 banco_lqr_corte_valid$Idade_mediana,
+                 banco_lqr_corte_valid$esquema)
 
 for(k in 1:length(qs)){
   
@@ -231,7 +231,7 @@ for(k in 1:length(qs)){
   # criando uma regressão linear
   
   # montando a regressão quantílica
-  fit_rq <- Rq(formula(fit_lm), x=T, y=T, tau=tau,data = banco_lqr_treino)
+  fit_rq <- Rq(formula(fit_lm), x=T, y=T, tau=tau,data = banco_lqr_corte_treino)
   
   fit_rq_logit <- update(fit_rq, logit_linpred ~ .)
   boot_rq_logit <- bootcov(fit_rq_logit,B=500)
@@ -258,7 +258,7 @@ for(k in 1:length(qs)){
 }
 
 #gráfico no ggplot está dando problemas com o gráfico padrão
-data.frame(upper=forecasts_95[,1],lower=forecasts_95[,2],indice=1:dim(forecasts_95)[1],dados=banco_lqr_valid$let) %>%
+data.frame(upper=forecasts_95[,1],lower=forecasts_95[,2],indice=1:dim(forecasts_95)[1],dados=banco_lqr_corte_valid$let) %>%
   ggplot(aes(x=indice,y=upper)) + geom_line()+
   geom_line(aes(y=lower)) + geom_point(aes(y=dados)) + xlab('Letalidade') +ylab('Índice')+
   labs(title = 'Intervalo de predição 95%')#+ My_Theme
@@ -266,11 +266,11 @@ ggsave(paste0(dir,'Performance.png'))
 
 #mantido até resolver o tema do ggplot
 
-plot(banco_lqr_valid$let,xlab="índice",ylab="Letalidade",ylim=c(0,0.10),pch=16, main="Intervalo de predição 95%")
+plot(banco_lqr_corte_valid$let,xlab="índice",ylab="Letalidade",ylim=c(0,0.10),pch=16, main="Intervalo de predição 95%")
 lines(forecasts_95[,1],lwd=1.3,lty=3)
 lines(forecasts_95[,2],lwd=1.3,lty=3)
 
-round(mean(forecasts_95[,1] <= banco_lqr_valid$let & banco_lqr_valid$let <= forecasts_95[,2], na.rm = TRUE)*100,2)
+round(mean(forecasts_95[,1] <= banco_lqr_corte_valid$let & banco_lqr_corte_valid$let <= forecasts_95[,2], na.rm = TRUE)*100,2)
 
 
 

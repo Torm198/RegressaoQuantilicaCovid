@@ -41,7 +41,7 @@ b <- SEADE %>%
 
 c <- vacinacao_sp %>% pivot_wider(names_from=vacina_descricao_dose,values_from = n,values_fill = 0) %>%
   group_by(vacina_dataAplicacao,estabelecimento_municipio_codigo,estabelecimento_uf)%>%
-  summarise(esquema=sum(`2ª Dose`+`Dose Adicional`+`Reforço`+`Única`+`2ª Dose Revacinação`+`3ª Dose`+`1º Reforço`,na.rm=T))  %>%
+  summarise(esquema=sum(`2ª Dose`+`Única`+`2ª Dose Revacinação`,na.rm=T))  %>%
   group_by(estabelecimento_municipio_codigo) %>% mutate(esquema=cumsum(esquema)) %>% summarise(esquema=max(esquema))%>%
   rename(Codigo=estabelecimento_municipio_codigo)
 
@@ -54,7 +54,7 @@ e <- vacinacao_sp  %>%
   summarise(Doses_diárias=mean(n)) %>% rename(Codigo=estabelecimento_municipio_codigo)
 
 banco_lqr <- left_join(b,a) %>% left_join(c) %>% left_join(d) %>% left_join(e) %>%
-  mutate(esquema=esquema/Pop) %>% filter(!is.na(Codigo))
+  mutate(esquema=max(c(1,esquema/Pop)),PIB_cap=PIB_cap/1000,densidade2021=densidade2021/10000) %>% filter(!is.na(Codigo))
 
 
 
@@ -76,13 +76,14 @@ antilogit_fn <- function(antiy, y_min, y_max, epsilon){
 
 ## Quantis de interesse
 qs <- seq(0.05,0.95,by=0.01)
-CL <- matrix(NA,length(qs),8)
-LS <- matrix(NA,length(qs),8)
-LI <- matrix(NA,length(qs),8)
+CL <- matrix(NA,length(qs),7)
+LS <- matrix(NA,length(qs),7)
+LI <- matrix(NA,length(qs),7)
+pv <- matrix(NA,length(qs),7)
 
 
 epsilon <- 0.0001
-fit_lm <- Glm(let~IDHM+PIB_cap+densidade2021+Risco+Doses_diárias+Idade_mediana+esquema,
+fit_lm <- Glm(let~IDHM+PIB_cap+densidade2021+Risco+Idade_mediana+esquema,
               x=T, y=T,data = banco_lqr)
 
 # transformação
@@ -117,18 +118,19 @@ logit_linpred <- logit_fn(banco_lqr$let,
   LI[k,] <- fit_rq_logit$coefficients-1.96*boot_rq_logit$summary[,2]
   CL[k,] <- fit_rq_logit$coefficients
   LS[k,] <- c(fit_rq_logit$coefficients)+1.96*boot_rq_logit$summary[,2]
+  pv[k,] <- fit_rq$summary[,4]
   
 }
 
 
-beta0   <- data.frame(li=LI[,1],cl=CL[,1],ls=LS[,1])
-beta1   <- data.frame(li=LI[,2],cl=CL[,2],ls=LS[,2])
-beta2   <- data.frame(li=LI[,3],cl=CL[,3],ls=LS[,3])
-beta3   <- data.frame(li=LI[,4],cl=CL[,4],ls=LS[,4])
-beta4   <- data.frame(li=LI[,5],cl=CL[,5],ls=LS[,5])
-beta5   <- data.frame(li=LI[,6],cl=CL[,6],ls=LS[,6]) 
-beta6   <- data.frame(li=LI[,7],cl=CL[,7],ls=LS[,7])
-beta7   <- data.frame(li=LI[,8],cl=CL[,8],ls=LS[,8])
+beta0   <- data.frame(li=LI[,1],cl=CL[,1],ls=LS[,1],pv=pv[,1])
+beta1   <- data.frame(li=LI[,2],cl=CL[,2],ls=LS[,2],pv=pv[,2])
+beta2   <- data.frame(li=LI[,3],cl=CL[,3],ls=LS[,3],pv=pv[,3])
+beta3   <- data.frame(li=LI[,4],cl=CL[,4],ls=LS[,4],pv=pv[,4])
+beta4   <- data.frame(li=LI[,5],cl=CL[,5],ls=LS[,5],pv=pv[,5])
+beta5   <- data.frame(li=LI[,6],cl=CL[,6],ls=LS[,6],pv=pv[,6]) 
+beta6   <- data.frame(li=LI[,7],cl=CL[,7],ls=LS[,7],pv=pv[,7])
+
 ##############################################################################
 
 ### plots
@@ -170,13 +172,13 @@ ggsave('Gráficos/beta3.png')
 ggplot(beta4, aes(x = qs, y = cl)) +
   geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
   geom_line() +
-  labs(x = expression(q), y = expression(beta[3])) + My_Theme
+  labs(x = expression(q), y = expression(beta[4])) + My_Theme
 ggsave('Gráficos/beta4.png')
 
 ggplot(beta5, aes(x = qs, y = cl)) +
   geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
   geom_line() +
-  labs(x = expression(q), y = expression(beta[4])) + My_Theme
+  labs(x = expression(q), y = expression(beta[5])) + My_Theme
 
 ggsave('Gráficos/beta5.png')
 
@@ -186,11 +188,6 @@ ggplot(beta6, aes(x = qs, y = cl)) +
   labs(x = expression(q), y = expression(beta[6])) + My_Theme
 ggsave('Gráficos/beta6.png')
 
-ggplot(beta7, aes(x = qs, y = cl)) +
-  geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
-  geom_line() +
-  labs(x = expression(q), y = expression(beta[6])) + My_Theme
-ggsave('Gráficos/beta7.png')
 
 
 ###################
