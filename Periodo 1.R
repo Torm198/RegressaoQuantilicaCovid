@@ -1,6 +1,12 @@
-dir <- 'Periodo 1/'
-banco_lqr_corte <- corte_banco('04/02/2020','04/11/2020')
+source('init.R',encoding='UTF-8')
 
+dir <- 'Cortes/Periodo 1/'
+
+# banco_lqr_corte <- corte_banco('04/02/2020','04/11/2020')
+# write_csv(banco_lqr_corte,'Cortes/Periodo 1/Banco 04.02.2020 a 04.11.2020.csv')
+
+
+banco_lqr_corte <- read_csv('Cortes/Periodo 1/Banco 04.02.2020 a 04.11.2020.csv')
 
 ###################
 fit1  <- lm(let~IDHM+densidade2021+Risco+Idade_mediana,
@@ -11,22 +17,24 @@ barplot(vif_values, main = "VIF Values")
 
 
 #######################
-logit_fn <- function(y, y_min, y_max, epsilon){
-  log((y-(y_min-epsilon))/(y_max+epsilon-y))}
 
-antilogit_fn <- function(antiy, y_min, y_max, epsilon){
-  (exp(antiy)*(y_max+epsilon)+y_min-epsilon)/(1+exp(antiy))}
 
-## Quantis de interesse
-qs <- seq(0.05,0.95,by=0.01)
-CL <- matrix(NA,length(qs),8)
-LS <- matrix(NA,length(qs),8)
-LI <- matrix(NA,length(qs),8)
 
+
+fit_lm <- Glm(let~IDHM+densidade2021+Risco+Idade_mediana,
+              x=T, y=T,data = banco_lqr_corte)
+
+
+qs <- seq(0.01,0.99,by=0.01)
+
+
+CL <- matrix(NA,length(qs),length(fit_lm$coefficients))
+LS <- matrix(NA,length(qs),length(fit_lm$coefficients))
+LI <- matrix(NA,length(qs),length(fit_lm$coefficients))
+pv <- matrix(NA,length(qs),length(fit_lm$coefficients))
 
 epsilon <- 0.0001
-fit_lm <- Glm(let~IDHM+PIB_cap+densidade2021+Risco+Idade_mediana,
-              x=T, y=T,data = banco_lqr_corte)
+
 
 # transformação
 y_min <- min(banco_lqr_corte$let, na.rm=T)
@@ -60,18 +68,17 @@ for(k in 1:length(qs)){
   LI[k,] <- fit_rq_logit$coefficients-1.96*boot_rq_logit$summary[,2]
   CL[k,] <- fit_rq_logit$coefficients
   LS[k,] <- c(fit_rq_logit$coefficients)+1.96*boot_rq_logit$summary[,2]
+  pv[k,] <- fit_rq$summary[,4]
   
 }
 
 
-beta0   <- data.frame(li=LI[,1],cl=CL[,1],ls=LS[,1])
-beta1   <- data.frame(li=LI[,2],cl=CL[,2],ls=LS[,2])
-beta2   <- data.frame(li=LI[,3],cl=CL[,3],ls=LS[,3])
-beta3   <- data.frame(li=LI[,4],cl=CL[,4],ls=LS[,4])
-beta4   <- data.frame(li=LI[,5],cl=CL[,5],ls=LS[,5])
-beta5   <- data.frame(li=LI[,6],cl=CL[,6],ls=LS[,6]) 
-beta6   <- data.frame(li=LI[,7],cl=CL[,7],ls=LS[,7])
-beta7   <- data.frame(li=LI[,8],cl=CL[,8],ls=LS[,8])
+beta0   <- data.frame(li=LI[,1],cl=CL[,1],ls=LS[,1],pv=pv[,1])
+beta1   <- data.frame(li=LI[,2],cl=CL[,2],ls=LS[,2],pv=pv[,2])
+beta2   <- data.frame(li=LI[,3],cl=CL[,3],ls=LS[,3],pv=pv[,3])
+beta3   <- data.frame(li=LI[,4],cl=CL[,4],ls=LS[,4],pv=pv[,4])
+beta4   <- data.frame(li=LI[,5],cl=CL[,5],ls=LS[,5],pv=pv[,5])
+
 ##############################################################################
 
 ### plots
@@ -113,27 +120,36 @@ ggsave(paste0(dir,'beta3.png'))
 ggplot(beta4, aes(x = qs, y = cl)) +
   geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
   geom_line() +
-  labs(x = expression(q), y = expression(beta[3])) + My_Theme
+  labs(x = expression(q), y = expression(beta[4])) + My_Theme
 ggsave(paste0(dir,'beta4.png'))
 
-ggplot(beta5, aes(x = qs, y = cl)) +
-  geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
-  geom_line() +
-  labs(x = expression(q), y = expression(beta[4])) + My_Theme
 
-ggsave(paste0(dir,'beta5.png'))
+###
 
-ggplot(beta6, aes(x = qs, y = cl)) +
-  geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
+ggplot(beta0, aes(x = qs, y = pv)) +
   geom_line() +
-  labs(x = expression(q), y = expression(beta[6])) + My_Theme
-ggsave(paste0(dir,'beta6.png'))
+  labs(x = expression(q), y = expression(beta[0]))
+ggsave(paste0(dir,'beta0_pvalor.png'))
 
-ggplot(beta7, aes(x = qs, y = cl)) +
-  geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
+ggplot(beta1, aes(x = qs, y = pv)) +
   geom_line() +
-  labs(x = expression(q), y = expression(beta[6])) + My_Theme
-ggsave(paste0(dir,'beta7.png'))
+  labs(x = expression(q), y = expression(beta[1]))
+ggsave(paste0(dir,'beta1_pvalor.png'))
+
+ggplot(beta2, aes(x = qs, y = pv)) +
+  geom_line() +
+  labs(x = expression(q), y = expression(beta[2]))
+ggsave(paste0(dir,'beta2_pvalor.png'))
+
+ggplot(beta3, aes(x = qs, y = pv)) +
+  geom_line() +
+  labs(x = expression(q), y = expression(beta[3]))
+ggsave(paste0(dir,'beta3_pvalor.png'))
+
+ggplot(beta4, aes(x = qs, y = pv)) +
+  geom_line() +
+  labs(x = expression(q), y = expression(beta[4]))
+ggsave(paste0(dir,'beta4_pvalor.png'))
 
 
 ###################
@@ -148,16 +164,15 @@ banco_lqr_corte_valid  <- banco_lqr_corte[-inds,]
 
 ## Quantis de interesse
 qs <- c(0.025,0.975)
-CL <- matrix(NA,length(qs),8)
-LS <- matrix(NA,length(qs),8)
-LI <- matrix(NA,length(qs),8)
-
+CL <- matrix(NA,length(qs),length(fit_lm$coefficients))
+LS <- matrix(NA,length(qs),length(fit_lm$coefficients))
+LI <- matrix(NA,length(qs),length(fit_lm$coefficients))
+pv <- matrix(NA,length(qs),length(fit_lm$coefficients))
 forecasts_95  <- matrix(NA,nrow(banco_lqr_corte_valid),length(qs)) 
 
 
 epsilon <- 0.0001
-fit_lm <- Glm(let~IDHM+PIB_cap+densidade2021+Risco+Doses_diárias+Idade_mediana+esquema,
-              x=T, y=T,data = banco_lqr_corte_treino)
+
 
 # transformação
 y_min <- min(banco_lqr_corte_treino$let, na.rm=T)
@@ -173,12 +188,9 @@ logit_linpred <- logit_fn(banco_lqr_corte_treino$let,
 
 X_valid <- cbind(1,
                  banco_lqr_corte_valid$IDHM,
-                 banco_lqr_corte_valid$PIB_cap,
                  banco_lqr_corte_valid$densidade2021,
                  banco_lqr_corte_valid$Risco,
-                 banco_lqr_corte_valid$Doses_diárias,
-                 banco_lqr_corte_valid$Idade_mediana,
-                 banco_lqr_corte_valid$esquema)
+                 banco_lqr_corte_valid$Idade_mediana)
 
 for(k in 1:length(qs)){
   
