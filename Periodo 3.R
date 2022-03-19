@@ -1,102 +1,45 @@
-#####Pacotes utilizados#######
-require(tidyverse)
-require(readr)
-require(ggcorrplot)
-require(geobr)
-require(VGAM)
-require(gtools)
-library(extraDistr)
-require(pracma)
-require(quantreg)
-library(rms)
-require(lubridate)
+source('init.R',encoding='UTF-8')
 
+dir <- 'Periodo 3/'
+# banco_lqr_corte <- corte_banco('01/12/2021','17/03/2022')
+# write_csv(banco_lqr_corte,'Cortes/Periodo 3/Banco 01.12.2021 a 17.03.2022.csv')
 
-####Carregando cache##########
-
-
-vacinacao_sp <- readRDS('cache/banco vacina.RDS')
-SEADE <- readRDS('cache/SEADE.RDS')
-Banco_Idade <- readRDS('Cache/Idade.RDS')
-
-####montagem do banco lqr caso geral##########
-
-
-
-a <- SEADE %>% group_by(Municipio,Risco) %>% summarise(n=sum(n)) %>%
-  pivot_wider(names_from = Risco,values_from = n) %>% summarise(Risco=sum(`1`)/sum(`0`+`1`))
-
-
-b <- SEADE %>%
-  pivot_wider(names_from=Obito,values_from=n,values_fill = 0)%>%
-  group_by(Municipio) %>%
-  mutate(let=sum(`1`)/sum(`0`+`1`)) %>%
-  select(-c(Data,Risco,`0`,`1`)) %>% unique()
-
-# c <- vacinacao_sp %>% pivot_wider(names_from=vacina_descricao_dose,values_from = n, values_fill = 0) %>%
-#   group_by(estabelecimento_municipio_codigo,estabelecimento_uf)%>%
-#   summarise(esquema=sum(`2ª Dose`+`Dose Adicional`+`Reforço`+`Única`+`2ª Dose Revacinação`+`3ª Dose`+`1º Reforço`,na.rm=T)) %>%
-#   rename(Codigo=estabelecimento_municipio_codigo)
-
-
-c <- vacinacao_sp %>% pivot_wider(names_from=vacina_descricao_dose,values_from = n,values_fill = 0) %>%
-  group_by(vacina_dataAplicacao,estabelecimento_municipio_codigo,estabelecimento_uf)%>%
-  summarise(esquema=sum(`2ª Dose`+`Única`+`2ª Dose Revacinação`,na.rm=T))  %>%
-  group_by(estabelecimento_municipio_codigo) %>% mutate(esquema=cumsum(esquema)) %>% summarise(esquema=max(esquema))%>%
-  rename(Codigo=estabelecimento_municipio_codigo)
-
-
-d <- Banco_Idade %>% group_by(Municipio) %>% summarise(Idade_mediana=median(Idade,na.rm = T))
-
-
-e <- vacinacao_sp  %>%
-  group_by(estabelecimento_municipio_codigo) %>% arrange(vacina_dataAplicacao) %>%
-  summarise(Doses_diárias=mean(n)) %>% rename(Codigo=estabelecimento_municipio_codigo)
-
-banco_lqr <- left_join(b,a) %>% left_join(c) %>% left_join(d) %>% left_join(e) %>%
-  mutate(esquema=max(c(1,esquema/Pop)),PIB_cap=PIB_cap/1000,densidade2021=densidade2021/10000) %>% filter(!is.na(Codigo))
-
-
-
+banco_lqr_corte <- read_csv('Cortes/Periodo 3/Banco 01.12.2021 a 17.03.2022.csv')
 
 ###################
-fit1  <- lm(let~IDHM+PIB_cap+densidade2021+Risco+Doses_diárias+Idade_mediana+esquema,
-            x=T, y=T,data = banco_lqr)
+fit1  <- lm(let~IDHM+densidade2021+Risco+Idade_mediana,
+            x=T, y=T,data = banco_lqr_corte)
 summary(fit1)
 vif_values <-vif(fit1)
 barplot(vif_values, main = "VIF Values")
 
 
 #######################
-logit_fn <- function(y, y_min, y_max, epsilon){
-  log((y-(y_min-epsilon))/(y_max+epsilon-y))}
-
-antilogit_fn <- function(antiy, y_min, y_max, epsilon){
-  (exp(antiy)*(y_max+epsilon)+y_min-epsilon)/(1+exp(antiy))}
+epsilon <- 0.0001
+fit_lm <- Glm(let~IDHM+densidade2021+Risco+Idade_mediana+dose2+reforco,
+              x=T, y=T,data = banco_lqr_corte)
 
 ## Quantis de interesse
-qs <- seq(0.05,0.95,by=0.01)
-CL <- matrix(NA,length(qs),7)
-LS <- matrix(NA,length(qs),7)
-LI <- matrix(NA,length(qs),7)
-pv <- matrix(NA,length(qs),7)
+qs <- seq(0.01,0.99,by=0.01)
+CL <- matrix(NA,length(qs),length(fit_lm$coefficients))
+LS <- matrix(NA,length(qs),length(fit_lm$coefficients))
+LI <- matrix(NA,length(qs),length(fit_lm$coefficients))
+pv <- matrix(NA,length(qs),length(fit_lm$coefficients))
 
 
-epsilon <- 0.0001
-fit_lm <- Glm(let~IDHM+PIB_cap+densidade2021+Risco+Idade_mediana+esquema,
-              x=T, y=T,data = banco_lqr)
+
 
 # transformação
-y_min <- min(banco_lqr$let, na.rm=T)
-y_max <- max(banco_lqr$let, na.rm=T)
+y_min <- min(banco_lqr_corte$let, na.rm=T)
+y_max <- max(banco_lqr_corte$let, na.rm=T)
 
-logit_linpred <- logit_fn(banco_lqr$let, 
+logit_linpred <- logit_fn(banco_lqr_corte$let, 
                           y_min=y_min,
                           y_max=y_max,
                           epsilon=epsilon)
 
 
- for(k in 1:length(qs)){
+for(k in 1:length(qs)){
   
   ## quantil do loop
   tau=qs[k] 
@@ -110,7 +53,7 @@ logit_linpred <- logit_fn(banco_lqr$let,
   
   
   # montando a regressão quantílica
-  fit_rq <- Rq(formula(fit_lm), x=T, y=T, tau=tau,data = banco_lqr)
+  fit_rq <- Rq(formula(fit_lm), x=T, y=T, tau=tau,data = banco_lqr_corte)
   
   fit_rq_logit <- update(fit_rq, logit_linpred ~ .)
   boot_rq_logit <- bootcov(fit_rq_logit,B=500)
@@ -118,7 +61,7 @@ logit_linpred <- logit_fn(banco_lqr$let,
   LI[k,] <- fit_rq_logit$coefficients-1.96*boot_rq_logit$summary[,2]
   CL[k,] <- fit_rq_logit$coefficients
   LS[k,] <- c(fit_rq_logit$coefficients)+1.96*boot_rq_logit$summary[,2]
-  pv[k,] <- fit_rq$summary[,4]
+  pv[k,] <- boot_rq_logit$summary[,4]
   
 }
 
@@ -130,7 +73,7 @@ beta3   <- data.frame(li=LI[,4],cl=CL[,4],ls=LS[,4],pv=pv[,4])
 beta4   <- data.frame(li=LI[,5],cl=CL[,5],ls=LS[,5],pv=pv[,5])
 beta5   <- data.frame(li=LI[,6],cl=CL[,6],ls=LS[,6],pv=pv[,6]) 
 beta6   <- data.frame(li=LI[,7],cl=CL[,7],ls=LS[,7],pv=pv[,7])
-
+beta7   <- data.frame(li=LI[,8],cl=CL[,8],ls=LS[,8],pv=pv[,8])
 ##############################################################################
 
 ### plots
@@ -147,47 +90,85 @@ ggplot(beta0, aes(x = qs, y = cl)) +
   geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
   geom_line() +
   labs(x = expression(q), y = expression(beta[0])) + My_Theme
-ggsave('Gráficos/beta0.png')
+ggsave(paste0(dir,'beta0.png'))
 
 ggplot(beta1, aes(x = qs, y = cl)) +
   geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
   geom_line() +
   labs(x = expression(q), y = expression(beta[1])) + My_Theme
-ggsave('Gráficos/beta1.png')
+ggsave(paste0(dir,'beta1.png'))
 
 
 ggplot(beta2, aes(x = qs, y = cl)) +
   geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
   geom_line() +
   labs(x = expression(q), y = expression(beta[2])) + My_Theme
-ggsave('Gráficos/beta2.png')
+ggsave(paste0(dir,'beta2.png'))
 
 ggplot(beta3, aes(x = qs, y = cl)) +
   geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
   geom_line() +
   labs(x = expression(q), y = expression(beta[3])) + My_Theme
-ggsave('Gráficos/beta3.png')
+ggsave(paste0(dir,'beta3.png'))
 
 
 ggplot(beta4, aes(x = qs, y = cl)) +
   geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
   geom_line() +
   labs(x = expression(q), y = expression(beta[4])) + My_Theme
-ggsave('Gráficos/beta4.png')
+ggsave(paste0(dir,'beta4.png'))
 
 ggplot(beta5, aes(x = qs, y = cl)) +
   geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
   geom_line() +
   labs(x = expression(q), y = expression(beta[5])) + My_Theme
 
-ggsave('Gráficos/beta5.png')
+ggsave(paste0(dir,'beta5.png'))
 
 ggplot(beta6, aes(x = qs, y = cl)) +
   geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
   geom_line() +
   labs(x = expression(q), y = expression(beta[6])) + My_Theme
-ggsave('Gráficos/beta6.png')
+ggsave(paste0(dir,'beta6.png'))
 
+ggplot(beta7, aes(x = qs, y = cl)) +
+  geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
+  geom_line() +
+  labs(x = expression(q), y = expression(beta[7])) + My_Theme
+ggsave(paste0(dir,'beta7.png'))
+
+########################
+
+
+ggplot(beta0, aes(x = qs, y = pv)) +
+  geom_line() +
+  labs(x = expression(q), y = expression(beta[0]))
+ggsave(paste0(dir,'beta0_pvalor.png'))
+
+ggplot(beta1, aes(x = qs, y = pv)) +
+  geom_line() +
+  labs(x = expression(q), y = expression(beta[1]))
+ggsave(paste0(dir,'beta1_pvalor.png'))
+
+ggplot(beta2, aes(x = qs, y = pv)) +
+  geom_line() +
+  labs(x = expression(q), y = expression(beta[2]))
+ggsave(paste0(dir,'beta2_pvalor.png'))
+
+ggplot(beta3, aes(x = qs, y = pv)) +
+  geom_line() +
+  labs(x = expression(q), y = expression(beta[3]))
+ggsave(paste0(dir,'beta3_pvalor.png'))
+
+ggplot(beta4, aes(x = qs, y = pv)) +
+  geom_line() +
+  labs(x = expression(q), y = expression(beta[4]))
+ggsave(paste0(dir,'beta4_pvalor.png'))
+
+ggplot(beta5, aes(x = qs, y = pv)) +
+  geom_line() +
+  labs(x = expression(q), y = expression(beta[5]))
+ggsave(paste0(dir,'beta5_pvalor.png'))
 
 
 ###################
@@ -195,9 +176,9 @@ ggsave('Gráficos/beta6.png')
 ###################
 
 set.seed(2020)
-inds <- sample(1:nrow(banco_lqr), 600, replace=FALSE)
-banco_lqr_treino <- banco_lqr[inds,]
-banco_lqr_valid  <- banco_lqr[-inds,]
+inds <- sample(1:nrow(banco_lqr_corte), 600, replace=FALSE)
+banco_lqr_corte_treino <- banco_lqr_corte[inds,]
+banco_lqr_corte_valid  <- banco_lqr_corte[-inds,]
 
 
 ## Quantis de interesse
@@ -206,18 +187,18 @@ CL <- matrix(NA,length(qs),8)
 LS <- matrix(NA,length(qs),8)
 LI <- matrix(NA,length(qs),8)
 
-forecasts_95  <- matrix(NA,nrow(banco_lqr_valid),length(qs)) 
+forecasts_95  <- matrix(NA,nrow(banco_lqr_corte_valid),length(qs)) 
 
 
 epsilon <- 0.0001
 fit_lm <- Glm(let~IDHM+PIB_cap+densidade2021+Risco+Doses_diárias+Idade_mediana+esquema,
-              x=T, y=T,data = banco_lqr_treino)
+              x=T, y=T,data = banco_lqr_corte_treino)
 
 # transformação
-y_min <- min(banco_lqr_treino$let, na.rm=T)
-y_max <- max(banco_lqr_treino$let, na.rm=T)
+y_min <- min(banco_lqr_corte_treino$let, na.rm=T)
+y_max <- max(banco_lqr_corte_treino$let, na.rm=T)
 
-logit_linpred <- logit_fn(banco_lqr_treino$let, 
+logit_linpred <- logit_fn(banco_lqr_corte_treino$let, 
                           y_min=y_min,
                           y_max=y_max,
                           epsilon=epsilon)
@@ -226,13 +207,13 @@ logit_linpred <- logit_fn(banco_lqr_treino$let,
 ## matriz X de validacao
 
 X_valid <- cbind(1,
-                 banco_lqr_valid$IDHM,
-                 banco_lqr_valid$PIB_cap,
-                 banco_lqr_valid$densidade2021,
-                 banco_lqr_valid$Risco,
-                 banco_lqr_valid$Doses_diárias,
-                 banco_lqr_valid$Idade_mediana,
-                 banco_lqr_valid$esquema)
+                 banco_lqr_corte_valid$IDHM,
+                 banco_lqr_corte_valid$PIB_cap,
+                 banco_lqr_corte_valid$densidade2021,
+                 banco_lqr_corte_valid$Risco,
+                 banco_lqr_corte_valid$Doses_diárias,
+                 banco_lqr_corte_valid$Idade_mediana,
+                 banco_lqr_corte_valid$esquema)
 
 for(k in 1:length(qs)){
   
@@ -242,7 +223,7 @@ for(k in 1:length(qs)){
   # criando uma regressão linear
   
   # montando a regressão quantílica
-  fit_rq <- Rq(formula(fit_lm), x=T, y=T, tau=tau,data = banco_lqr_treino)
+  fit_rq <- Rq(formula(fit_lm), x=T, y=T, tau=tau,data = banco_lqr_corte_treino)
   
   fit_rq_logit <- update(fit_rq, logit_linpred ~ .)
   boot_rq_logit <- bootcov(fit_rq_logit,B=500)
@@ -269,16 +250,16 @@ for(k in 1:length(qs)){
 }
 
 #gráfico no ggplot está dando problemas com o gráfico padrão
-data.frame(upper=forecasts_95[,1],lower=forecasts_95[,2],indice=1:dim(forecasts_95)[1],dados=banco_lqr_valid$let) %>%
+data.frame(upper=forecasts_95[,1],lower=forecasts_95[,2],indice=1:dim(forecasts_95)[1],dados=banco_lqr_corte_valid$let) %>%
   ggplot(aes(x=indice,y=upper)) + geom_line()+
   geom_line(aes(y=lower)) + geom_point(aes(y=dados)) + xlab('Letalidade') +ylab('Índice')+
   labs(title = 'Intervalo de predição 95%')#+ My_Theme
-ggsave('Gráficos/Performance.png')
+ggsave(paste0(dir,'Performance.png'))
 
 #mantido até resolver o tema do ggplot
 
-plot(banco_lqr_valid$let,xlab="índice",ylab="Letalidade",ylim=c(0,0.10),pch=16, main="Intervalo de predição 95%")
+plot(banco_lqr_corte_valid$let,xlab="índice",ylab="Letalidade",ylim=c(0,0.10),pch=16, main="Intervalo de predição 95%")
 lines(forecasts_95[,1],lwd=1.3,lty=3)
 lines(forecasts_95[,2],lwd=1.3,lty=3)
 
-round(mean(forecasts_95[,1] <= banco_lqr_valid$let & banco_lqr_valid$let <= forecasts_95[,2], na.rm = TRUE)*100,2)
+round(mean(forecasts_95[,1] <= banco_lqr_corte_valid$let & banco_lqr_corte_valid$let <= forecasts_95[,2], na.rm = TRUE)*100,2)

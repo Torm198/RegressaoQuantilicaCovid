@@ -1,10 +1,39 @@
+#####Pacotes
+
+require(tidyverse)
+require(readr)
+require(ggcorrplot)
+require(geobr)
+require(VGAM)
+require(gtools)
+library(extraDistr)
+require(pracma)
+require(quantreg)
+library(rms)
+require(lubridate)
+
+
+####Carregando cache##########
+
+
+vacinacao_sp <- readRDS('cache/banco vacina.RDS')
+SEADE <- readRDS('cache/SEADE.RDS')
+Banco_Idade <- readRDS('Cache/Idade.RDS')
+
+
+
+
+
+##########funções criadas para ##################
+
+#normalização para as variáveis 
+
 normalizacao <- function(x){
   
   minimo <- min(x,na.rm = T)
   maximo <- max(x,na.rm = T)
   return((x-minimo)/(maximo-minimo))
-  }
-
+}
 
 corte_banco <- function(Data_inicio,Data_final){
   
@@ -18,15 +47,15 @@ corte_banco <- function(Data_inicio,Data_final){
   b <- SEADE %>% filter(Data %within% int)  %>%
     pivot_wider(names_from=Obito,values_from=n,values_fill = 0)%>%
     group_by(Municipio) %>%
-    mutate(let=sum(`1`)/sum(`0`+`1`)) %>%
+    mutate(let=sum(`1`,na.rm=T)/sum(`0`+`1`)) %>%
     select(-c(Data,Risco,`0`,`1`)) %>% unique()
-   
-   # Método antigo
-   # c <- vacinacao_sp%>% filter(Data %within% int) %>% pivot_wider(names_from=vacina_descricao_dose,values_from = n, values_fill = 0) %>%
-   #   group_by(estabelecimento_municipio_codigo,estabelecimento_uf)%>%
-   #   summarise(esquema=sum(`2ª Dose`+`Dose Adicional`+`Reforço`+`Única`+`2ª Dose Revacinação`+`3ª Dose`+`1º Reforço`,na.rm=T)) %>%
-   #   rename(Codigo=estabelecimento_municipio_codigo)
-   # 
+  
+  # Método antigo
+  # c <- vacinacao_sp%>% filter(Data %within% int) %>% pivot_wider(names_from=vacina_descricao_dose,values_from = n, values_fill = 0) %>%
+  #   group_by(estabelecimento_municipio_codigo,estabelecimento_uf)%>%
+  #   summarise(esquema=sum(`2ª Dose`+`Dose Adicional`+`Reforço`+`Única`+`2ª Dose Revacinação`+`3ª Dose`+`1º Reforço`,na.rm=T)) %>%
+  #   rename(Codigo=estabelecimento_municipio_codigo)
+  # 
   
   c <- vacinacao_sp %>% pivot_wider(names_from=vacina_descricao_dose,values_from = n,values_fill = 0) %>%
     group_by(vacina_dataAplicacao,estabelecimento_municipio_codigo,estabelecimento_uf)%>%
@@ -58,15 +87,8 @@ corte_banco <- function(Data_inicio,Data_final){
 }
 
 
+logit_fn <- function(y, y_min, y_max, epsilon){
+  log((y-(y_min-epsilon))/(y_max+epsilon-y))}
 
-
-
-
-
-
-
-
-
-
-
-
+antilogit_fn <- function(antiy, y_min, y_max, epsilon){
+  (exp(antiy)*(y_max+epsilon)+y_min-epsilon)/(1+exp(antiy))}
