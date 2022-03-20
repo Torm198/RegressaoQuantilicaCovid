@@ -1,3 +1,4 @@
+require(tidyverse)
 ####Dados do IBGE: Importação e Tratamento##############
 
 # dados demográficos
@@ -31,19 +32,19 @@ trat2 <- function(x){
 }
 
 parte1 <- readr::read_csv2_chunked(
-  'Dados/Vacina sp parte 1.csv',
+  'Dados/vacina sp parte 1.csv',
   DataFrameCallback$new(trat),
   chunk_size = 7000) %>% trat2()
 
 
 parte2 <- readr::read_csv2_chunked(
-  'Dados/Vacina sp parte 2.csv',
+  'Dados/vacina sp parte 2.csv',
   DataFrameCallback$new(trat),
   chunk_size = 7000)%>% trat2()
 
 
 parte3 <- readr::read_csv2_chunked(
-  'Dados/Vacina sp parte 3.csv',
+  'Dados/vacina sp parte 3.csv',
   DataFrameCallback$new(trat),
   chunk_size = 7000)%>% trat2()
 
@@ -60,7 +61,7 @@ rm(parte1,parte2,parte3)
 #########TRATAMENTO MICRODADOS COVID SEADE################
 
 
-SEADE <- read_csv2('Dados/20220121_Casos-e-obitos-ESP.csv',
+SEADE <- read_csv2('Dados/20220319_Casos-e-obitos-ESP.csv',
                    locale = locale(encoding = 'UTF-8')) %>%
   mutate(Data=lubridate::dmy(`Data Inicio Sintomas`)) %>%
   unite('Risco',Asma:`Outros Fatores De Risco`,remove = TRUE) %>%
@@ -76,7 +77,7 @@ saveRDS(SEADE,'Cache/SEADE.RDS')
 
 #Preparo do banco de idade
 
-Banco_Idade <- read_csv2('Dados/20220121_Casos-e-obitos-ESP.csv',
+Banco_Idade <- read_csv2('Dados/20220319_Casos-e-obitos-ESP.csv',
                    locale = locale(encoding = 'UTF-8')) %>%
   mutate(Data=lubridate::dmy(`Data Inicio Sintomas`)) %>%
   select(Municipio,Data,Idade)%>%
