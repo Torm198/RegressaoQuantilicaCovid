@@ -4,10 +4,11 @@ dir <- 'Cortes/Periodo 3/'
 # banco_lqr_corte <- corte_banco('01/12/2021','17/03/2022')
 # write_csv(banco_lqr_corte,'Cortes/Periodo 3/Banco 01.12.2021 a 17.03.2022.csv')
 
-banco_lqr_corte <- read_csv('Cortes/Periodo 3/Banco 01.12.2021 a 17.03.2022.csv')
+banco_lqr_corte <- read_csv('Cortes/Periodo 3/Banco 01.12.2021 a 17.03.2022.csv') %>%
+  filter(Municipio!='UBIRAJARA')
 
 ###################
-fit1  <- lm(let~IDHM+densidade2021+Risco+Idade_mediana+dose2+reforco,
+fit1  <- lm(let~IDHM+densidade2021+Risco+Idade_mediana+reforco,
             x=T, y=T,data = banco_lqr_corte)
 summary(fit1)
 vif_values <-vif(fit1)
@@ -16,7 +17,7 @@ barplot(vif_values, main = "VIF Values")
 
 #######################
 epsilon <- 0.0001
-fit_lm <- Glm(let~IDHM+densidade2021+Risco+Idade_mediana+dose2+reforco,
+fit_lm <- Glm(let~IDHM+densidade2021+Risco+Idade_mediana+reforco,
               x=T, y=T,data = banco_lqr_corte)
 
 ## Quantis de interesse
@@ -125,11 +126,6 @@ ggplot(beta5, aes(x = qs, y = cl)) +
 
 ggsave(paste0(dir,'beta5.png'))
 
-ggplot(beta6, aes(x = qs, y = cl)) +
-  geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
-  geom_line() +
-  labs(x = expression(q), y = expression(beta[6])) + My_Theme
-ggsave(paste0(dir,'beta6.png'))
 
 
 ########################
@@ -165,10 +161,6 @@ ggplot(beta5, aes(x = qs, y = pv)) +
   labs(x = expression(q), y = expression(beta[5]))
 ggsave(paste0(dir,'beta5_pvalor.png'))
 
-ggplot(beta6, aes(x = qs, y = pv)) +
-  geom_line() +
-  labs(x = expression(q), y = expression(beta[6]))
-ggsave(paste0(dir,'beta6_pvalor.png'))
 
 
 ###################
@@ -209,7 +201,6 @@ X_valid <- cbind(1,
                  banco_lqr_corte_valid$densidade2021,
                  banco_lqr_corte_valid$Risco,
                  banco_lqr_corte_valid$Idade_mediana,
-                 banco_lqr_corte_valid$dose2,
                  banco_lqr_corte_valid$reforco)
 
 for(k in 1:length(qs)){
