@@ -13,7 +13,7 @@ fit1  <- lm(let~IDHM+densidade2021+Risco+Idade_mediana,
             x=T, y=T,data = banco_lqr_corte)
 summary(fit1)
 vif_values <-vif(fit1)
-barplot(vif_values, main = "VIF Values")
+barplot(vif_values, main = "VIF para o Período 1")
 
 
 #######################
@@ -95,61 +95,61 @@ ggplot(beta0, aes(x = qs, y = cl)) +
   geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
   geom_line() +
   labs(x = expression(q), y = expression(beta[0])) + My_Theme
-ggsave(paste0(dir,'beta0.png'))
+ggsave(paste0(dir,'beta0.pdf'),device="pdf")
 
 ggplot(beta1, aes(x = qs, y = cl)) +
   geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
   geom_line() +
   labs(x = expression(q), y = expression(beta[1])) + My_Theme
-ggsave(paste0(dir,'beta1.png'))
+ggsave(paste0(dir,'beta1.pdf'),device="pdf")
 
 
 ggplot(beta2, aes(x = qs, y = cl)) +
   geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
   geom_line() +
   labs(x = expression(q), y = expression(beta[2])) + My_Theme
-ggsave(paste0(dir,'beta2.png'))
+ggsave(paste0(dir,'beta2.pdf'),device="pdf")
 
 ggplot(beta3, aes(x = qs, y = cl)) +
   geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
   geom_line() +
   labs(x = expression(q), y = expression(beta[3])) + My_Theme
-ggsave(paste0(dir,'beta3.png'))
+ggsave(paste0(dir,'beta3.pdf'),device="pdf")
 
 
 ggplot(beta4, aes(x = qs, y = cl)) +
   geom_ribbon(aes(ymin = li, ymax = ls), alpha = 0.2) +
   geom_line() +
   labs(x = expression(q), y = expression(beta[4])) + My_Theme
-ggsave(paste0(dir,'beta4.png'))
+ggsave(paste0(dir,'beta4.pdf'),device="pdf")
 
 
 ###
 
 ggplot(beta0, aes(x = qs, y = pv)) +
   geom_line() +
-  labs(x = expression(q), y = expression(beta[0]))
-ggsave(paste0(dir,'beta0_pvalor.png'))
+  labs(x = expression(q), y = expression('p-valor'~beta[0]))
+ggsave(paste0(dir,'beta0_pvalor.pdf'),device="pdf")
 
 ggplot(beta1, aes(x = qs, y = pv)) +
   geom_line() +
-  labs(x = expression(q), y = expression(beta[1]))
-ggsave(paste0(dir,'beta1_pvalor.png'))
+  labs(x = expression(q), y =  expression('p-valor'~beta[1]))
+ggsave(paste0(dir,'beta1_pvalor.pdf'),device="pdf")
 
 ggplot(beta2, aes(x = qs, y = pv)) +
   geom_line() +
-  labs(x = expression(q), y = expression(beta[2]))
-ggsave(paste0(dir,'beta2_pvalor.png'))
+  labs(x = expression(q), y =  expression('p-valor'~beta[2]))
+ggsave(paste0(dir,'beta2_pvalor.pdf'),device="pdf")
 
 ggplot(beta3, aes(x = qs, y = pv)) +
   geom_line() +
-  labs(x = expression(q), y = expression(beta[3]))
-ggsave(paste0(dir,'beta3_pvalor.png'))
+  labs(x = expression(q), y =  expression('p-valor'~beta[3]))
+ggsave(paste0(dir,'beta3_pvalor.pdf'),device="pdf")
 
 ggplot(beta4, aes(x = qs, y = pv)) +
   geom_line() +
-  labs(x = expression(q), y = expression(beta[4]))
-ggsave(paste0(dir,'beta4_pvalor.png'))
+  labs(x = expression(q), y = expression('p-valor'~beta[4]))
+ggsave(paste0(dir,'beta4_pvalor.pdf'),device="pdf")
 
 
 ###################
@@ -231,12 +231,7 @@ data.frame(upper=forecasts_95[,1],lower=forecasts_95[,2],indice=1:dim(forecasts_
   ggplot(aes(x=indice,y=upper)) + geom_line()+
   geom_line(aes(y=lower)) + geom_point(aes(y=dados)) + xlab('Letalidade') +ylab('Índice')+
   labs(title = 'Intervalo de predição 95%')#+ My_Theme
-ggsave(paste0(dir,'Performance.png'))
+ggsave(paste0(dir,'Performance.pdf'),device="pdf")
 
-#mantido até resolver o tema do ggplot
-
-plot(banco_lqr_corte_valid$let,xlab="índice",ylab="Letalidade",ylim=c(0,0.10),pch=16, main="Intervalo de predição 95%")
-lines(forecasts_95[,1],lwd=1.3,lty=3)
-lines(forecasts_95[,2],lwd=1.3,lty=3)
 
 round(mean(forecasts_95[,1] <= banco_lqr_corte_valid$let & banco_lqr_corte_valid$let <= forecasts_95[,2], na.rm = TRUE)*100,2)

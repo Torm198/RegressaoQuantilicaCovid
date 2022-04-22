@@ -41,7 +41,7 @@ corte_banco <- function(Data_inicio,Data_final){
   int <- interval(dmy(Data_inicio),dmy(Data_final))
   
   a <- SEADE %>% filter(Data %within% int) %>% group_by(Municipio,Risco) %>% summarise(n=sum(n)) %>%
-    pivot_wider(names_from = Risco,values_from = n) %>% summarise(Risco=sum(`1`)/sum(`0`+`1`))
+    pivot_wider(names_from = Risco,values_from = n,values_fill = 0) %>% summarise(Risco=sum(`1`)/sum(`0`+`1`))
   
   
   b <- SEADE %>% filter(Data %within% int)  %>%
@@ -64,10 +64,10 @@ corte_banco <- function(Data_inicio,Data_final){
               reforco=sum(Reforço+`3ª Dose`+`1º Reforço`))  %>%
     arrange(vacina_dataAplicacao) %>%
     group_by(estabelecimento_municipio_codigo)%>%
-    filter(vacina_dataAplicacao %within% int)%>%
     mutate(dose1=cumsum(dose1),
            dose2=cumsum(dose2),
            reforco=cumsum(reforco)) %>%
+    filter(vacina_dataAplicacao %within% int)%>%
     summarise(across(dose1:reforco,max))%>%
     rename(Codigo=estabelecimento_municipio_codigo)
   
@@ -75,11 +75,8 @@ corte_banco <- function(Data_inicio,Data_final){
   
   d <- Banco_Idade %>% filter(Data %within% int) %>% group_by(Municipio) %>% summarise(Idade_mediana=median(Idade,na.rm = T))
   
-  e <- vacinacao_sp %>% filter(vacina_dataAplicacao %within% int) %>%
-    group_by(estabelecimento_municipio_codigo) %>% arrange(vacina_dataAplicacao) %>%
-    summarise(Doses_diárias=mean(n)) %>% rename(Codigo=estabelecimento_municipio_codigo)
   
-  banco_lqr_corte <- left_join(b,a) %>% left_join(c) %>% left_join(d) %>% left_join(e) %>% ungroup() %>%
+  banco_lqr_corte <- left_join(b,a) %>% left_join(c) %>% left_join(d) %>% ungroup() %>%
     mutate(PIB_cap=PIB_cap/10000,densidade2021=densidade2021/100) %>%
     mutate(across(c(dose1,dose2,reforco),~normalizacao(./Pop)))%>% filter(!is.na(Codigo))
   
