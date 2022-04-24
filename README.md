@@ -1,6 +1,6 @@
 # RegressaoQuantilicaCovid
 
-Códigos para o trabalho de conclusão de curso com temática de regressão logística quantílica
+Códigos para o trabalho de conclusão de curso com temática de regressão logística quantílica para COVID-19
 
 Os códigos estão organizados da seguinte forma:
 - init.R: é o script onde estão todas as funções e importações de bibliotecas utilizadas no projeto
