@@ -83,9 +83,18 @@ corte_banco <- function(Data_inicio,Data_final){
   return(banco_lqr_corte)
 }
 
+tratamento <- function(x,nomea){
+  x <- data.frame(x)
+  names(x) <- nome
+  x$quantil <-qs 
+  
+  x <- x%>% pivot_longer(-quantil, names_to = 'beta', values_to=nomea)
+  return(x)
+}
 
-logit_fn <- function(y, y_min, y_max, epsilon){
+
+logit_fn <- function(y, y_min=0, y_max=1, epsilon){
   log((y-(y_min-epsilon))/(y_max+epsilon-y))}
 
-antilogit_fn <- function(antiy, y_min, y_max, epsilon){
+antilogit_fn <- function(antiy, y_min=0, y_max=1, epsilon){
   (exp(antiy)*(y_max+epsilon)+y_min-epsilon)/(1+exp(antiy))}

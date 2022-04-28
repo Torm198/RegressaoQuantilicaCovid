@@ -37,12 +37,9 @@ epsilon <- 0.0001
 
 
 # transformação
-y_min <- min(banco_lqr_corte$let, na.rm=T)
-y_max <- max(banco_lqr_corte$let, na.rm=T)
+
 
 logit_linpred <- logit_fn(banco_lqr_corte$let, 
-                          y_min=y_min,
-                          y_max=y_max,
                           epsilon=epsilon)
 
 
@@ -150,16 +147,38 @@ ggplot(beta4, aes(x = qs, y = pv)) +
   geom_line() +
   labs(x = expression(q), y = expression('p-valor'~beta[4]))
 ggsave(paste0(dir,'beta4_pvalor.pdf'),device="pdf")
+#################
+nome <- names(fit_rq$coefficients)
 
+# função abaixo recebe uma matriz de resultado para tratar numa forma que facilite a criação de gráficos
+resultado <- left_join(tratamento(LI,'inferior'),tratamento(CL,'pontual')) %>%
+  left_join(tratamento(LS,'superior')) %>%
+  left_join(tratamento(pv,'pvalor'))
+
+ggplot(resultado,aes(x=quantil,y=pontual))+
+  geom_line()+
+  geom_ribbon(aes(ymin=inferior,ymax=superior),alpha=0.2)+
+  facet_wrap(~beta,scales = 'free_y')
+ggsave(paste0(dir,'estimativas_sem_escala.pdf'),device='pdf')
+ggplot(resultado,aes(x=quantil,y=pontual))+
+  geom_line()+
+  geom_ribbon(aes(ymin=inferior,ymax=superior),alpha=0.2)+
+  facet_wrap(~beta)
+ggsave(paste0(dir,'estimativas_com_escala.pdf'),device='pdf')
+
+ggplot(resultado,aes(x=quantil,y=pvalor))+
+  geom_line()+
+  facet_wrap(~beta)
+ggsave(paste0(dir,'pvalor.pdf'),device='pdf')
 
 ###################
 ## Previsoes
 ###################
 
 set.seed(2020)
-inds <- sample(1:nrow(banco_lqr_corte), 600, replace=FALSE)
-banco_lqr_corte_treino <- banco_lqr_corte[inds,]
-banco_lqr_corte_valid  <- banco_lqr_corte[-inds,]
+inds <- sample(1:nrow(banco_lqr_corte), 200, replace=FALSE)
+banco_lqr_corte_treino <- banco_lqr_corte[-inds,]
+banco_lqr_corte_valid  <- banco_lqr_corte[inds,]
 
 
 ## Quantis de interesse
@@ -175,12 +194,8 @@ epsilon <- 0.0001
 
 
 # transformação
-y_min <- min(banco_lqr_corte_treino$let, na.rm=T)
-y_max <- max(banco_lqr_corte_treino$let, na.rm=T)
 
 logit_linpred <- logit_fn(banco_lqr_corte_treino$let, 
-                          y_min=y_min,
-                          y_max=y_max,
                           epsilon=epsilon)
 
 
@@ -216,8 +231,6 @@ for(k in 1:length(qs)){
   
   # Change back to org. scale
   transformed_p  <- antilogit_fn(p_treino,
-                                 y_min=y_min,
-                                 y_max=y_max,
                                  epsilon=epsilon)
   
   
