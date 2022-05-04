@@ -2,11 +2,11 @@ source('init.R',encoding='UTF-8')
 
 dir <- 'Cortes/Periodo 1/'
 
-# banco_lqr_corte <- corte_banco('04/02/2020','04/11/2020')
-# write_csv(banco_lqr_corte,'Cortes/Periodo 1/Banco 04.02.2020 a 04.11.2020.csv')
+banco_lqr_corte <- corte_banco('04/02/2020','04/10/2020')
+write_csv(banco_lqr_corte,'Cortes/Periodo 1/Banco 04.02.2020 a 04.10.2020.csv')
 
 
-banco_lqr_corte <- read_csv('Cortes/Periodo 1/Banco 04.02.2020 a 04.11.2020.csv')
+banco_lqr_corte <- read_csv('Cortes/Periodo 1/Banco 04.02.2020 a 04.10.2020.csv')
 
 ###################
 fit1  <- lm(let~IDHM+densidade2021+Risco+Idade_mediana,
