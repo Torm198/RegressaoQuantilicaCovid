@@ -22,6 +22,11 @@ graf_all <- left_join(mun_sp,todo_periodo,by=c('cod_ibge'='Codigo'))
 
 tema_mapa <- theme(line = element_blank())
 
+##############casos gerais##################
+SEADE %>% group_by(Data) %>% summarise(n=sum(n)) %>%
+  ggplot(.,aes(x=Data,y=n))+geom_col()+geom_vline(xintercept=as.numeric(c(dmy("04/11/2020"),dmy("30/11/2021"))))+
+  ylab('N° de novos casos de COVID-19')
+
 
 ##############mapa letalidade###########
 
