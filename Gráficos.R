@@ -3,8 +3,8 @@ source('init.R',encoding='UTF-8')
 metadata <- download_metadata()
 
 mun_sp <- read_municipality(code_muni = 35,year = 2020) %>% mutate(cod_ibge=as.numeric(substr(code_muni,1,6)))
-periodo1 <- read_csv('Cortes/Periodo 1/Banco 04.02.2020 a 04.11.2020.csv')
-periodo2 <- read_csv('Cortes/Periodo 2/Banco 01.03.2021 a 30.11.2021.csv')
+periodo1 <- read_csv('Cortes/Periodo 1/Banco 04.02.2020 a 04.10.2020.csv')
+periodo2 <- read_csv('Cortes/Periodo 2/Banco 05.10.2020 a 30.11.2021.csv')
 periodo3 <- read_csv('Cortes/Periodo 3/Banco 01.12.2021 a 17.03.2022.csv')
 
 

@@ -1,6 +1,7 @@
 source('init.R',encoding='UTF-8')
 
 dir <- 'Cortes/Periodo 3/'
+
 # banco_lqr_corte <- corte_banco('01/12/2021','17/03/2022')
 # write_csv(banco_lqr_corte,'Cortes/Periodo 3/Banco 01.12.2021 a 17.03.2022.csv')
 

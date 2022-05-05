@@ -1,10 +1,11 @@
 source('init.R',encoding='UTF-8')
 
 dir <- 'Cortes/Periodo 2/'
-banco_lqr_corte <- corte_banco('05/10/2021','30/11/2021')
-write_csv(banco_lqr_corte,'Cortes/Periodo 2/Banco 05.10.2021 a 30.11.2021.csv')
 
-banco_lqr_corte <- read_csv('Cortes/Periodo 2/Banco 05.10.2021 a 30.11.2021.csv')
+# banco_lqr_corte <- corte_banco('05/10/2020','30/11/2021')
+# write_csv(banco_lqr_corte,'Cortes/Periodo 2/Banco 05.10.2020 a 30.11.2021.csv')
+
+banco_lqr_corte <- read_csv('Cortes/Periodo 2/Banco 05.10.2020 a 30.11.2021.csv')
 
 ###################
 fit1  <- lm(let~IDHM+densidade2021+Risco+Idade_mediana+dose1+dose2,
@@ -265,3 +266,4 @@ ggsave(paste0(dir,'Performance.pdf'),device="pdf")
 
 
 round(mean(forecasts_95[,1] <= banco_lqr_corte_valid$let & banco_lqr_corte_valid$let <= forecasts_95[,2], na.rm = TRUE)*100,2)
+
