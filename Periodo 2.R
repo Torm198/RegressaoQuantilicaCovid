@@ -14,6 +14,12 @@ summary(fit1)
 vif_values <-vif(fit1)
 barplot(vif_values, main = "VIF Values")
 
+fit1  <- lm(let~IDHM+densidade2021+Risco+Idade_mediana+dose2,
+            x=T, y=T,data = banco_lqr_corte)
+summary(fit1)
+vif_values <-vif(fit1)
+barplot(vif_values, main = "VIF Values")
+
 
 #######################
 
@@ -259,7 +265,7 @@ for(k in 1:length(qs)){
 #gráfico no ggplot está dando problemas com o gráfico padrão
 data.frame(upper=forecasts_95[,1],lower=forecasts_95[,2],indice=1:dim(forecasts_95)[1],dados=banco_lqr_corte_valid$let) %>%
   ggplot(aes(x=indice,y=upper)) + geom_line()+
-  geom_line(aes(y=lower)) + geom_point(aes(y=dados)) + xlab('ID') +ylab('Taxa de Letalidade')+
+  geom_line(aes(y=lower)) + geom_point(aes(y=dados)) + ylab('Taxa de Letalidade') +xlab('Índice')+
   labs(title = 'Intervalo de predição 95%')#+ My_Theme
 ggsave(paste0(dir,'Performance.pdf'),device="pdf")
 
