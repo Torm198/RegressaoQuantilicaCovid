@@ -1,6 +1,7 @@
 source('init.R',encoding='UTF-8')
 
 dir <- 'Cortes/Periodo 3/'
+
 # banco_lqr_corte <- corte_banco('01/12/2021','17/03/2022')
 # write_csv(banco_lqr_corte,'Cortes/Periodo 3/Banco 01.12.2021 a 17.03.2022.csv')
 
@@ -255,7 +256,7 @@ for(k in 1:length(qs)){
 #gráfico no ggplot está dando problemas com o gráfico padrão
 data.frame(upper=forecasts_95[,1],lower=forecasts_95[,2],indice=1:dim(forecasts_95)[1],dados=banco_lqr_corte_valid$let) %>%
   ggplot(aes(x=indice,y=upper)) + geom_line()+
-  geom_line(aes(y=lower)) + geom_point(aes(y=dados)) + xlab('Letalidade') +ylab('Índice')+
+  geom_line(aes(y=lower)) + geom_point(aes(y=dados)) + ylab('Taxa de Letalidade') +xlab('Índice')+
   labs(title = 'Intervalo de predição 95%')#+ My_Theme
 ggsave(paste0(dir,'Performance.pdf'),device="pdf")
 

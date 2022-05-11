@@ -2,11 +2,11 @@ source('init.R',encoding='UTF-8')
 
 dir <- 'Cortes/Periodo 1/'
 
-# banco_lqr_corte <- corte_banco('04/02/2020','04/11/2020')
-# write_csv(banco_lqr_corte,'Cortes/Periodo 1/Banco 04.02.2020 a 04.11.2020.csv')
+# banco_lqr_corte <- corte_banco('04/02/2020','04/10/2020')
+# write_csv(banco_lqr_corte,'Cortes/Periodo 1/Banco 04.02.2020 a 04.10.2020.csv')
 
 
-banco_lqr_corte <- read_csv('Cortes/Periodo 1/Banco 04.02.2020 a 04.11.2020.csv')
+banco_lqr_corte <- read_csv('Cortes/Periodo 1/Banco 04.02.2020 a 04.10.2020.csv')
 
 ###################
 fit1  <- lm(let~IDHM+densidade2021+Risco+Idade_mediana,
@@ -242,7 +242,7 @@ for(k in 1:length(qs)){
 #gráfico no ggplot está dando problemas com o gráfico padrão
 data.frame(upper=forecasts_95[,1],lower=forecasts_95[,2],indice=1:dim(forecasts_95)[1],dados=banco_lqr_corte_valid$let) %>%
   ggplot(aes(x=indice,y=upper)) + geom_line()+
-  geom_line(aes(y=lower)) + geom_point(aes(y=dados)) + xlab('Letalidade') +ylab('Índice')+
+  geom_line(aes(y=lower)) + geom_point(aes(y=dados)) + ylab('Letalidade') +xlab('Índice')+
   labs(title = 'Intervalo de predição 95%')#+ My_Theme
 ggsave(paste0(dir,'Performance.pdf'),device="pdf")
 

@@ -3,8 +3,8 @@ source('init.R',encoding='UTF-8')
 metadata <- download_metadata()
 
 mun_sp <- read_municipality(code_muni = 35,year = 2020) %>% mutate(cod_ibge=as.numeric(substr(code_muni,1,6)))
-periodo1 <- read_csv('Cortes/Periodo 1/Banco 04.02.2020 a 04.11.2020.csv')
-periodo2 <- read_csv('Cortes/Periodo 2/Banco 01.03.2021 a 30.11.2021.csv')
+periodo1 <- read_csv('Cortes/Periodo 1/Banco 04.02.2020 a 04.10.2020.csv')
+periodo2 <- read_csv('Cortes/Periodo 2/Banco 05.10.2020 a 30.11.2021.csv')
 periodo3 <- read_csv('Cortes/Periodo 3/Banco 01.12.2021 a 17.03.2022.csv')
 
 
@@ -23,11 +23,11 @@ graf_all <- left_join(mun_sp,todo_periodo,by=c('cod_ibge'='Codigo'))
 tema_mapa <- theme(line = element_blank())
 
 ##############casos gerais##################
-SEADE %>% group_by(Data) %>% summarise(n=sum(n)) %>%
-  ggplot(.,aes(x=Data,y=n))+geom_col()+geom_vline(xintercept=as.numeric(c(dmy("04/11/2020"),dmy("30/11/2021"))))+
+SEADE %>% group_by(Data) %>% summarise(n=sum(n,na.rm=T)) %>%
+  ggplot(.,aes(x=Data,y=n))+geom_col()+geom_vline(xintercept=as.numeric(c(dmy("04/10/2020"),dmy("30/11/2021"))))+
   ylab('N° de novos casos de COVID-19')
 
-
+ggsave('Gráficos Exploratórios/Casos gerais de COVID-19.pdf',device = 'pdf',dpi=320)
 ##############mapa letalidade###########
 
 grafico_letalidade <-
@@ -102,7 +102,7 @@ graf_vacina <- todo_periodo %>% pivot_longer(c(dose1,dose2,reforco)) %>%
 mapa_vacina <- 
 ggplot()+geom_sf(data = graf_vacina ,aes(fill=value),size=0)+
   scale_fill_gradient(name = 'Proporção de doses\naplicadas na população',low="lightgrey", high="magenta",na.value = "white") +
-  facet_wrap(vars(periodo,name),nrow=2,dir = "h")
+  facet_wrap(vars(periodo,name),nrow=2,dir = "h") + tema_mapa
 
 ggsave(mapa_vacina,file='Gráficos Exploratórios/Mapa vacina.pdf',
        device = 'pdf',dpi=320)
